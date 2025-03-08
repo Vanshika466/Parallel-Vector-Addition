@@ -1,0 +1,81 @@
+// Include library for measuring execution time
+#include <chrono>
+
+// Include standard library for random number generation
+#include <cstdlib>
+
+// Include input-output stream library
+#include <iostream>
+
+// Include time library for random seed initialization
+#include <time.h>
+
+// Use the chrono namespace for time measurement
+using namespace std::chrono;
+
+// Use the standard namespace for input/output operations
+using namespace std;
+
+// Function to generate a random vector with given size
+void randomVector(int vector[], int size) {
+
+ // Loop through each index of the vector
+  for (int i = 0; i < size; i++) {
+
+// Assign a random value between 0 and 99
+    vector[i] = rand() % 100;
+  }
+}
+
+int main() {
+
+// Define the vector size (100 million elements)
+  unsigned long size = 100000000;
+
+// Seed the random number generator using current time
+  srand(time(0));
+
+// Declare pointers for three vectors (dynamically allocated)
+  int *v1, *v2, *v3;
+
+// Start measuring execution time
+  auto start = high_resolution_clock::now();
+
+// Allocate memory for the three vectors using malloc
+// Memory allocation for vector 1
+  v1 = (int *)malloc(size * sizeof(int));
+
+// Memory allocation for vector 2
+  v2 = (int *)malloc(size * sizeof(int));
+
+// Memory allocation for vector 3 (result)
+  v3 = (int *)malloc(size * sizeof(int));
+
+// Generate random values for vectors v1 and v2
+
+// Fill vector v1 with random numbers
+  randomVector(v1, size);
+// Fill vector v2 with random numbers
+  randomVector(v2, size);
+
+// Perform element-wise vector addition
+
+// Loop through all elements in the vectors
+  for (int i = 0; i < size; i++) {
+// Add corresponding elements from v1 and v2, store in v3
+    v3[i] = v1[i] + v2[i];
+  }
+
+ // Stop measuring execution time
+  auto stop = high_resolution_clock::now();
+
+ // Calculate time duration in microseconds
+  auto duration = duration_cast<microseconds>(stop - start);
+
+   // Print execution time in microseconds
+  cout << "Time taken by function :" << duration.count() << " microseconds"
+       << endl;
+
+// Indicate successful program termination
+  return 0;
+}
