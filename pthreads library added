@@ -1,0 +1,143 @@
+// Include library for measuring execution time
+#include <chrono>
+// Include standard library for random number generation
+#include <cstdlib>
+// Include input-output stream library
+#include <iostream>
+// Include time library for random seed initialization
+#include <time.h>
+// Include pthread library for multithreading
+#include <pthread.h>
+// Use the chrono namespace for time measurement
+using namespace std::chrono;
+// Use the standard namespace for input/output operations
+using namespace std;
+
+// Structure to hold data for each thread
+struct ThreadData {
+    int* v1;
+    int* v2;
+    int* v3;
+    unsigned long start_index;
+    unsigned long end_index;
+};
+
+// Global variable for vector size
+unsigned long vector_size = 100000000;  // 'vector_size'
+// Default number of threads
+int num_threads = 4;
+
+// Function to generate random values for a portion of the vector
+void* randomVectorPortion(void* arg) {
+    // Cast the void pointer to ThreadData
+    ThreadData* data = (ThreadData*)arg;
+    
+    // Generate random values for the assigned portion of vectors
+    for (unsigned long i = data->start_index; i < data->end_index; i++) {
+        data->v1[i] = rand() % 100;
+        data->v2[i] = rand() % 100;
+    }
+    
+    return NULL;
+}
+
+// Function to add vectors for a portion of the data
+void* addVectorsPortion(void* arg) {
+    // Cast the void pointer to ThreadData
+    ThreadData* data = (ThreadData*)arg;
+    
+    // Perform vector addition for the assigned portion
+    for (unsigned long i = data->start_index; i < data->end_index; i++) {
+        data->v3[i] = data->v1[i] + data->v2[i];
+    }
+    
+    return NULL;
+}
+
+int main(int argc, char* argv[]) {
+    // Allow number of threads to be specified via command line
+    if (argc > 1) {
+        num_threads = atoi(argv[1]);
+        if (num_threads <= 0) num_threads = 4;  // Fallback to default if invalid
+    }
+    
+    cout << "Running with " << num_threads << " threads" << endl;
+    
+    // Seed the random number generator using current time
+    srand(time(0));
+    
+    // Declare pointers for three vectors (dynamically allocated)
+    int *v1, *v2, *v3;
+    
+    // Start measuring execution time
+    auto start = high_resolution_clock::now();
+    
+    // Allocate memory for the three vectors using malloc
+    v1 = (int*)malloc(vector_size * sizeof(int));  
+    v2 = (int*)malloc(vector_size * sizeof(int));  
+    v3 = (int*)malloc(vector_size * sizeof(int));  
+    
+    // Create thread arrays
+    pthread_t* init_threads = new pthread_t[num_threads];
+    pthread_t* add_threads = new pthread_t[num_threads];
+    
+    // Create thread data array
+    ThreadData* thread_data = new ThreadData[num_threads];
+    
+    // Calculate elements per thread
+    unsigned long chunk_size = vector_size / num_threads;  
+    
+    // Initialize thread data and create initialization threads
+    for (int i = 0; i < num_threads; i++) {
+        // Set up thread data
+        thread_data[i].v1 = v1;
+        thread_data[i].v2 = v2;
+        thread_data[i].v3 = v3;
+        thread_data[i].start_index = i * chunk_size;
+        
+        // Handle the last thread (may have extra elements if size is not evenly divisible)
+        if (i == num_threads - 1) {
+            thread_data[i].end_index = vector_size;  // 
+        } else {
+            thread_data[i].end_index = (i + 1) * chunk_size;
+        }
+        
+        // Create the thread for vector initialization
+        pthread_create(&init_threads[i], NULL, randomVectorPortion, (void*)&thread_data[i]);
+    }
+    
+    // Wait for all initialization threads to complete
+    for (int i = 0; i < num_threads; i++) {
+        pthread_join(init_threads[i], NULL);
+    }
+    
+    // Create threads for vector addition
+    for (int i = 0; i < num_threads; i++) {
+        pthread_create(&add_threads[i], NULL, addVectorsPortion, (void*)&thread_data[i]);
+    }
+    
+    // Wait for all addition threads to complete
+    for (int i = 0; i < num_threads; i++) {
+        pthread_join(add_threads[i], NULL);
+    }
+    
+    // Stop measuring execution time
+    auto stop = high_resolution_clock::now();
+    
+    // Calculate time duration in microseconds
+    auto duration = duration_cast<microseconds>(stop - start);
+    
+    // Print execution time in microseconds
+    cout << "Time taken by parallel function: " << duration.count() << " microseconds" << endl;
+    
+    // Free allocated memory
+    free(v1);
+    free(v2);
+    free(v3);
+    delete[] init_threads;
+    delete[] add_threads;
+    delete[] thread_data;
+    
+    // Indicate successful program termination
+    return 0;
+}
